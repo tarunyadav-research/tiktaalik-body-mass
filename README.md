@@ -56,6 +56,8 @@ The fishcatch data come from Brofeldt, P. (1917), in Järvi, T. H., *Finlands Fi
 
 Code: MIT ([`LICENSE`](LICENSE)). Results and figures: CC BY 4.0.
 
+[![DOI](https://zenodo.org/badge/1442952727.svg)](https://doi.org/10.5281/zenodo.23885425)
+
 ## Citation
 
 If you use this code, please cite the paper above. GitHub's "Cite this repository" button reads [`CITATION.cff`](CITATION.cff).
