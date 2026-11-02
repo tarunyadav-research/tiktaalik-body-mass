@@ -1,0 +1,77 @@
+C by species: {'bream': 240, 'whitefish': 314, 'roach': 290, 'silver bream': 262, 'smelt': 339, 'pike': 357, 'perch': 297}
+
+Validation (leave one species out):
+  bream        n= 34 median err +30.8%  median |err| 30.8%  in C: False
+  whitefish    n=  6 median err +1.3%  median |err| 4.0%  in C: True
+  roach        n= 19 median err +12.5%  median |err| 12.5%  in C: True
+  silver bream n= 11 median err +19.9%  median |err| 19.9%  in C: False
+  smelt        n= 14 median err -10.0%  median |err| 11.9%  in C: True
+  pike         n= 17 median err -14.4%  median |err| 14.4%  in C: True
+  perch        n= 56 median err +10.2%  median |err| 10.4%  in C: True
+
+NUFV 108 at fixed published geometry: 5.48 kg (95% 4.34-7.24) (Hohn-Schulte et al. 2013: 6.94 kg)
+
+== NUFV 108, published reconstruction: L = 0.80 m (CV 0.05)
+  Method B (Tiktaalik): 5.49 kg (95% 2.96-10.37)
+  Method A (generic)  : 3.34 kg (95% 1.96-8.70)
+  Method A (+tail)    : 5.54 kg (95% 3.16-14.49)
+  B/A median ratio    : 1.64 (tail-adjusted 0.99)
+  Var shares (B)      : {'length (cubed)': np.float64(0.22), 'width / length (squared)': np.float64(0.39), 'depth / width': np.float64(0.218), 'mass coefficient C': np.float64(0.172)}
+
+== NUFV 108, revised trunk: L = 0.63 m (CV 0.08)
+  Method B (Tiktaalik): 4.29 kg (95% 2.09-8.92)
+  Method A (generic)  : 1.59 kg (95% 0.79-4.59)
+  Method A (+tail)    : 2.63 kg (95% 1.29-7.58)
+  B/A median ratio    : 2.70 (tail-adjusted 1.63)
+  Var shares (B)      : {'length (cubed)': np.float64(0.418), 'width / length (squared)': np.float64(0.291), 'depth / width': np.float64(0.163), 'mass coefficient C': np.float64(0.128)}
+
+== NUFV 110, published reconstruction: L = 1.19 m (CV 0.1118033988749895)
+  Method B (Tiktaalik): 18.27 kg (95% 7.80-43.33)
+  Method A (generic)  : 12.42 kg (95% 5.18-37.08)
+  Method A (+tail)    : 20.47 kg (95% 8.35-61.24)
+  B/A median ratio    : 1.47 (tail-adjusted 0.89)
+  Var shares (B)      : {'length (cubed)': np.float64(0.583), 'width / length (squared)': np.float64(0.208), 'depth / width': np.float64(0.116), 'mass coefficient C': np.float64(0.092)}
+
+== NUFV 110, revised trunk: L = 0.93 m (CV 0.1118033988749895)
+  Method B (Tiktaalik): 14.26 kg (95% 6.08-33.87)
+  Method A (generic)  : 5.74 kg (95% 2.40-17.56)
+  Method A (+tail)    : 9.49 kg (95% 3.89-28.76)
+  B/A median ratio    : 2.48 (tail-adjusted 1.50)
+  Var shares (B)      : {'length (cubed)': np.float64(0.586), 'width / length (squared)': np.float64(0.206), 'depth / width': np.float64(0.116), 'mass coefficient C': np.float64(0.092)}
+
+== NUFV 109, published reconstruction: L = 1.60 m (CV 0.1118033988749895)
+  Method B (Tiktaalik): 43.94 kg (95% 18.72-104.46)
+  Method A (generic)  : 30.97 kg (95% 12.85-90.73)
+  Method A (+tail)    : 51.28 kg (95% 20.65-150.49)
+  B/A median ratio    : 1.42 (tail-adjusted 0.86)
+  Var shares (B)      : {'length (cubed)': np.float64(0.585), 'width / length (squared)': np.float64(0.208), 'depth / width': np.float64(0.116), 'mass coefficient C': np.float64(0.091)}
+
+== NUFV 109, revised trunk: L = 1.25 m (CV 0.1118033988749895)
+  Method B (Tiktaalik): 34.35 kg (95% 14.66-81.29)
+  Method A (generic)  : 14.34 kg (95% 5.99-43.02)
+  Method A (+tail)    : 23.67 kg (95% 9.69-70.57)
+  B/A median ratio    : 2.40 (tail-adjusted 1.45)
+  Var shares (B)      : {'length (cubed)': np.float64(0.585), 'width / length (squared)': np.float64(0.207), 'depth / width': np.float64(0.116), 'mass coefficient C': np.float64(0.092)}
+
+== largest, as reported: L = 2.75 m (CV 0.15)
+  Method B (Tiktaalik): 223.44 kg (95% 79.02-628.04)
+  Method A (generic)  : 170.75 kg (95% 56.38-561.28)
+  Method A (+tail)    : 282.17 kg (95% 90.89-924.76)
+  B/A median ratio    : 1.31 (tail-adjusted 0.79)
+  Var shares (B)      : {'length (cubed)': np.float64(0.714), 'width / length (squared)': np.float64(0.143), 'depth / width': np.float64(0.08), 'mass coefficient C': np.float64(0.063)}
+
+Sensitivity (NUFV 108):
+  C from pike only: 6.45 kg (95% 3.54-12.02)
+  C including breams: 5.14 kg (95% 2.71-9.92)
+  skull width instead of trunk width: 5.80 kg (95% 3.12-10.92)
+  depth +25% (crushing): 6.86 kg (95% 3.70-12.92)
+
+rho sensitivity (Method A, largest reported):
+  rho=-0.8: 284.52 kg (95% 79.50-990.32)
+  rho=-0.95: 281.05 kg (95% 90.96-930.83)
+  rho=-0.99: 279.76 kg (95% 94.03-918.79)
+
+Method A analogue checks:
+  Neoceratodus forsteri: L=170 cm, record 40.0 kg, predicted 35.39 kg (95% 26.01-48.20)
+  Latimeria chalumnae: L=168 cm, record 95.0 kg, predicted 66.46 kg (95% 54.77-80.64)
+  Atractosteus spatula: L=260 cm, record 137.0 kg, predicted 115.86 kg (95% 76.70-175.19)
