@@ -2,7 +2,7 @@
 
 Code and data for:
 
-> Yadav, T. (2026). How heavy was *Tiktaalik roseae*? A validated body-mass estimate with explicit uncertainty, and why specimen length is the open question. EarthArXiv preprint. DOI: [to be added]
+> Yadav, T. (2026). How heavy was *Tiktaalik roseae*? A validated body-mass estimate with explicit uncertainty, and why specimen length is the open question. PaleorXiv preprint. DOI: [to be added]
 
 Author: Tarun Yadav, Independent Researcher, Delhi, India · ORCID [0009-0000-2291-5146](https://orcid.org/0009-0000-2291-5146)
 
