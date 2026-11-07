@@ -6,6 +6,8 @@ Code and data for:
 
 Author: Tarun Yadav, Independent Researcher, Delhi, India · ORCID [0009-0000-2291-5146](https://orcid.org/0009-0000-2291-5146)
 
+[![DOI](https://zenodo.org/badge/1442952727.svg)](https://doi.org/10.5281/zenodo.23885425)
+
 ## What it does
 
 Estimates the body mass of *Tiktaalik roseae* specimens by Monte Carlo simulation, with explicit uncertainty.
