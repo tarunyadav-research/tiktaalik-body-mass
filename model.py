@@ -8,7 +8,8 @@ Method B (primary, Tiktaalik-specific):
     C     : empirical mass coefficient M / (L w d), measured on 157 extant
             fishes of 7 species with known mass, width and depth
             (Brofeldt 1917 "fishcatch" data; data/fishcatch.dat).
-    Validated by leave-one-species-out prediction on the same data.
+    Tested by leave-one-species-out prediction on the same data. None of these
+    fishes has Tiktaalik's flattened shape, so C is applied outside the tested range.
 
 Method A (reference, generic fish):
     W = a L^b from extant analogue fishes (FishBase Bayesian LWR), with
@@ -16,10 +17,10 @@ Method A (reference, generic fish):
     fish of this length weigh?", which is the comparison against which
     Tiktaalik's broad body is judged.
 
-Because Method B is a product of independent factors, Var(ln M) splits
-exactly into per-factor terms (exact first-order Sobol indices).
+If the factors of Method B are independent, as the primary analysis assumes,
+Var(ln M) splits exactly into per-factor terms (first-order Sobol indices).
 
-Run:  python model.py        (writes results/ and figures/)
+Run:  python model.py > results/report.txt        (writes results/ and figures/)
 """
 
 import json
@@ -27,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -326,11 +328,72 @@ def main():
                 predicted=summarize(method_a(rng, np.full(N, p["max_L_cm"] / 100), species=s)))
         for s, p in ANALOGUES.items() if p["max_L_cm"]}
 
+    out["robustness"] = robustness_checks(fish, validation)
+
     with open(RESULTS / "estimates.json", "w") as fh:
         json.dump(out, fh, indent=2, default=float)
 
     make_figures(rng, fish, pred, out)
     print_report(out)
+
+
+def robustness_checks(fish, validation):
+    """Checks added in revision. A separate random stream keeps all other results unchanged."""
+    rng = np.random.default_rng(SEED + 1)
+    res = {}
+    d_w = PROPORTIONS["trunk_d"] / PROPORTIONS["trunk_w"]
+    L = lognormal(rng, *SIZES["NUFV 108, published reconstruction"][:2], N)
+
+    # 2.75 m read as total length: remove a caudal fin at Brofeldt proportions.
+    ratio = sample_tail_ratio(rng, fish, N)
+    L_tot = lognormal(rng, 2.75, 0.15, N)
+    res["2.75 m as total length"] = summarize(method_b(L_tot * ratio, sample_shape(rng, fish, N)))
+    res["tail_ratio_median"] = float(np.median(ratio))
+
+    # Crushing that conserves cross-section area: depth x k, width / k leaves w*d unchanged.
+    k = HOLOTYPE_DEPTH_CRUSH
+    f = sample_shape(rng, fish, N)
+    res["crushing, area conserved"] = summarize(
+        method_b(L, {**f, "w_over_L": f["w_over_L"] / k, "d_over_w": f["d_over_w"] * k**2}))
+
+    # Correlated errors in width and depth. Crushing implies a negative correlation.
+    res["width-depth correlation"] = {}
+    s1, s2 = np.sqrt(np.log(1 + W_OVER_L_CV**2)), np.sqrt(np.log(1 + D_OVER_W_CV**2))
+    for rho in (-0.5, 0.5):
+        z1, z2 = rng.standard_normal(N), rng.standard_normal(N)
+        f = {"C": sample_C(rng, fish, N),
+             "w_over_L": W_OVER_L_PUB * np.exp(s1 * z1),
+             "d_over_w": d_w * np.exp(s2 * (rho * z1 + np.sqrt(1 - rho**2) * z2))}
+        res["width-depth correlation"][str(rho)] = summarize(method_b(L, f))
+
+    # How far Tiktaalik lies outside the calibration shapes.
+    C = mass_coefficient(fish)
+    rows = []
+    for s, name in FISHCATCH_SPECIES.items():
+        m = fish[:, 0] == s
+        rows.append(dict(species=name, C=float(np.median(C[m])),
+                         d_over_w=float(np.median(fish[m, 4] / fish[m, 5])),
+                         w_over_L1=float(np.median(fish[m, 5] / fish[m, 2]))))
+    res["fish_shapes"] = rows
+
+    # Rough extrapolation of C across species to Tiktaalik's depth/width (7 points).
+    x, y = np.log([r["d_over_w"] for r in rows]), np.log([r["C"] for r in rows])
+    slope, intercept = np.polyfit(x, y, 1)
+    C_trend = float(np.exp(intercept + slope * np.log(d_w)))
+    C_med = float(np.median(sample_C(rng, fish, N)))
+    res["C_trend"] = dict(slope=float(slope), r=float(np.corrcoef(x, y)[0, 1]), C_at_tiktaalik=C_trend,
+                          C_primary_median=C_med, mass_ratio=C_trend / C_med)
+    # The same fit without the breams, which cluster at high depth/width.
+    keep = [i for i, s in enumerate(FISHCATCH_SPECIES) if s in C_SPECIES]
+    slope5, intercept5 = np.polyfit(x[keep], y[keep], 1)
+    C_trend5 = float(np.exp(intercept5 + slope5 * np.log(d_w)))
+    res["C_trend_five_species"] = dict(slope=float(slope5), r=float(np.corrcoef(x[keep], y[keep])[0, 1]),
+                                       C_at_tiktaalik=C_trend5, mass_ratio=C_trend5 / C_med)
+
+    # Validation across all seven species, without the shape-based exclusion.
+    errs = [v["median_abs_pct_error"] for v in validation.values()]
+    res["validation_all_species"] = dict(min=min(errs), max=max(errs), median=float(np.median(errs)))
+    return res
 
 
 # ---------------------------------------------------------------------------
@@ -376,11 +439,12 @@ def make_figures(rng, fish, pred, out):
         ax.plot(Ls, q[:, 1], color=col, lw=2, label=name)
     ax.set_yscale("log")
     short = {"NUFV 108, published reconstruction": "NUFV 108", "NUFV 110, published reconstruction": "NUFV 110",
-             "NUFV 109, published reconstruction": "NUFV 109", "largest, as reported": "2.75 m (reported)"}
-    for label in short:
-        L0 = SIZES[label][0]
+             "NUFV 109, published reconstruction": "NUFV 109", "largest, as reported": "2.75 m, no caudal fin"}
+    marks = [(SIZES[label][0], text) for label, text in short.items()]
+    marks.append((2.75 * out["robustness"]["tail_ratio_median"], "2.75 m total length"))
+    for L0, text in marks:
         ax.axvline(L0, color="#a0aec0", lw=0.8, ls="--")
-        ax.text(L0 + 0.03, 0.03, short[label], rotation=90, va="bottom", ha="left", fontsize=8,
+        ax.text(L0 + 0.03, 0.03, text, rotation=90, va="bottom", ha="left", fontsize=8,
                 color="#4a5568", transform=ax.get_xaxis_transform())
     ax.set_xlabel("Body length without caudal fin (m)")
     ax.set_ylabel("Body mass (kg)")
@@ -390,7 +454,7 @@ def make_figures(rng, fish, pred, out):
     fig.savefig(FIGURES / "fig2_mass_vs_length.png", dpi=200)
     plt.close(fig)
 
-    # Fig 3: variance decomposition of ln M (Method B) for two sizes.
+    # Fig 4: variance decomposition of ln M (Method B) for two sizes.
     fig, ax = plt.subplots(figsize=(6.2, 3.0))
     names = list(out["estimates"]["NUFV 108, published reconstruction"]["method_B_variance_shares"])
     y = np.arange(len(names))
@@ -407,7 +471,110 @@ def make_figures(rng, fish, pred, out):
     ax.legend(frameon=False, fontsize=8, loc="lower right")
     ax.set_title("What drives the uncertainty (Method B)")
     fig.tight_layout()
-    fig.savefig(FIGURES / "fig3_variance_shares.png", dpi=200)
+    fig.savefig(FIGURES / "fig4_variance_shares.png", dpi=200)
+    plt.close(fig)
+
+    # Fig 5: Tiktaalik lies outside the calibration fishes in shape, and C varies with shape.
+    rb = out["robustness"]
+    d_w = PROPORTIONS["trunk_d"] / PROPORTIONS["trunk_w"]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.0, 3.9))
+    for i, (s, name) in enumerate(FISHCATCH_SPECIES.items()):
+        m = fish[:, 0] == s
+        hollow = s not in C_SPECIES
+        a1.scatter(fish[m, 4] / fish[m, 5], fish[m, 5] / fish[m, 2], s=14, marker=markers[i], label=name,
+                   facecolors="none" if hollow else None, edgecolors="#4a5568" if hollow else None, alpha=0.7)
+    a1.scatter([d_w, d_w], [W_OVER_L_PUB, W_OVER_L_REV], s=120, marker="*", color="#1a202c", zorder=3)
+    a1.annotate("Tiktaalik, published", (d_w, W_OVER_L_PUB), xytext=(8, -4), textcoords="offset points", fontsize=8)
+    a1.annotate("Tiktaalik, revised trunk", (d_w, W_OVER_L_REV), xytext=(8, -4), textcoords="offset points", fontsize=8)
+    a1.set_xscale("log")
+    a1.set_xticks([0.5, 1, 2, 3], ["0.5", "1", "2", "3"])
+    a1.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    a1.set_xlim(0.45, 4)
+    a1.set_xlabel("Depth / width")
+    a1.set_ylabel("Width / length (no caudal fin)")
+    a1.set_title("A. Body shape", loc="left", fontsize=10)
+    a1.legend(frameon=False, fontsize=7, loc="upper right", markerscale=1.2)
+
+    rows = rb["fish_shapes"]
+    xs = np.array([r["d_over_w"] for r in rows])
+    ys = np.array([r["C"] for r in rows])
+    for i, r in enumerate(rows):
+        hollow = list(FISHCATCH_SPECIES)[i] not in C_SPECIES
+        a2.scatter(r["d_over_w"], r["C"], s=36, marker=markers[i], facecolors="none" if hollow else None,
+                   edgecolors="#4a5568" if hollow else None)
+    grid = np.linspace(np.log(0.6), np.log(3.0), 50)
+    keep = [i for i, s in enumerate(FISHCATCH_SPECIES) if s in C_SPECIES]
+    for idx, ls, lab in ((list(range(len(rows))), "-", "fit, 7 species"), (keep, "--", "fit, 5 species")):
+        slope, icpt = np.polyfit(np.log(xs[idx]), np.log(ys[idx]), 1)
+        a2.plot(np.exp(grid), np.exp(icpt + slope * grid), color="#718096", lw=1.2, ls=ls, label=lab)
+    a2.axvspan(xs.min(), xs.max(), color="#edf2f7", lw=0, zorder=0)
+    C_hs = HOHN_SCHULTE_MASS_KG / (PROPORTIONS["L"] * PROPORTIONS["trunk_w"] * PROPORTIONS["trunk_d"])
+    marks = ((rb["C_trend"]["C_primary_median"], "C used here (317)", "#c05621"),
+             (C_hs, f"implied by Hohn-Schulte et al. ({C_hs:.0f})", "#2b6cb0"),
+             (rb["C_trend"]["C_at_tiktaalik"], f"trend, 7 species ({rb['C_trend']['C_at_tiktaalik']:.0f})", "#1a202c"),
+             (rb["C_trend_five_species"]["C_at_tiktaalik"],
+              f"trend, 5 species ({rb['C_trend_five_species']['C_at_tiktaalik']:.0f})", "#1a202c"))
+    for val, lab, col in marks:
+        a2.scatter(d_w, val, s=40, marker="D", color=col, zorder=3)
+        a2.annotate(lab, (d_w, val), xytext=(8, -3), textcoords="offset points", fontsize=7.5)
+    a2.axvline(d_w, color="#a0aec0", lw=0.8, ls=":")
+    a2.set_xscale("log")
+    a2.set_xticks([0.5, 1, 2, 3], ["0.5", "1", "2", "3"])
+    a2.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    a2.set_xlim(0.45, 4)
+    a2.set_ylim(180, 720)
+    a2.set_xlabel("Depth / width")
+    a2.set_ylabel("Mass coefficient C (kg m$^{-3}$)")
+    a2.set_title("B. C against body shape", loc="left", fontsize=10)
+    a2.legend(frameon=False, fontsize=7, loc="upper right")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "fig5_shape_and_C.png", dpi=200)
+    plt.close(fig)
+
+    # Fig 3: holotype estimates under each assumption.
+    est = out["estimates"]
+    sens = out["sensitivity_nufv108"]
+    main_b = est["NUFV 108, published reconstruction"]["method_B_tiktaalik"]
+
+    def scaled(d, k):
+        return dict(median=d["median"] * k, ci95=(d["ci95"][0] * k, d["ci95"][1] * k))
+
+    groups = {"primary": ("#2b6cb0", "o"), "sensitivity": ("#2f855a", "s"), "model form": ("#c05621", "D")}
+    items = [
+        ("Published reconstruction", main_b, "primary"),
+        ("Revised trunk (31 vertebrae)", est["NUFV 108, revised trunk"]["method_B_tiktaalik"], "primary"),
+        ("C from pike only", sens["C from pike only"], "sensitivity"),
+        ("C including breams", sens["C including breams"], "sensitivity"),
+        ("Skull width for trunk width", sens["skull width instead of trunk width"], "sensitivity"),
+        ("Depth +25%", sens["depth +25% (crushing)"], "sensitivity"),
+        ("Crushing, area conserved", rb["crushing, area conserved"], "sensitivity"),
+        ("Width-depth correlation -0.5", rb["width-depth correlation"]["-0.5"], "sensitivity"),
+        ("Width-depth correlation +0.5", rb["width-depth correlation"]["0.5"], "sensitivity"),
+        ("C from trend, 7 species", scaled(main_b, rb["C_trend"]["mass_ratio"]), "model form"),
+        ("C from trend, 5 species", scaled(main_b, rb["C_trend_five_species"]["mass_ratio"]), "model form"),
+    ]
+    fig, ax = plt.subplots(figsize=(6.6, 4.6))
+    seen = set()
+    for j, (lab, d, g) in enumerate(items):
+        col, mk = groups[g]
+        ax.plot(d["ci95"], [j, j], color=col, lw=2, solid_capstyle="round")
+        ax.scatter(d["median"], j, s=44, marker=mk, color=col, zorder=3, edgecolors="white", linewidths=1.5,
+                   label=None if g in seen else g)
+        seen.add(g)
+        ax.text(d["ci95"][1] * 1.06, j, f"{d['median']:.1f}", va="center", fontsize=8, color="#4a5568")
+    ax.axvline(HOHN_SCHULTE_MASS_KG, color="#718096", lw=1, ls="--")
+    ax.text(HOHN_SCHULTE_MASS_KG * 1.02, -0.9, "Hohn-Schulte et al. (6.94 kg)", fontsize=7.5, color="#4a5568")
+    ax.set_yticks(range(len(items)), [it[0] for it in items], fontsize=8.5)
+    ax.invert_yaxis()
+    ax.set_ylim(len(items) - 0.4, -1.4)
+    ax.set_xscale("log")
+    ax.set_xticks([2, 5, 10, 20, 40], ["2", "5", "10", "20", "40"])
+    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.set_xlim(1.5, 45)
+    ax.set_xlabel("Holotype body mass (kg), median and 95% interval")
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "fig3_holotype_estimates.png", dpi=200)
     plt.close(fig)
 
 
@@ -438,6 +605,22 @@ def print_report(out):
     print("\nMethod A analogue checks:")
     for s, c in out["method_A_analogue_checks"].items():
         print(f"  {s}: L={c['max_L_cm']} cm, record {c['published_max_kg']} kg, predicted {fmt(c['predicted'])}")
+    rb = out["robustness"]
+    print("\nRobustness checks:")
+    print("  2.75 m as total length:", fmt(rb["2.75 m as total length"]), f"(L1/L3 median {rb['tail_ratio_median']:.3f})")
+    print("  crushing, area conserved:", fmt(rb["crushing, area conserved"]))
+    for r, d in rb["width-depth correlation"].items():
+        print(f"  width-depth rho={r}: {fmt(d)}")
+    for r in rb["fish_shapes"]:
+        print(f"  {r['species']:12s} C={r['C']:.0f} d/w={r['d_over_w']:.2f} w/L1={r['w_over_L1']:.3f}")
+    t = rb["C_trend"]
+    print(f"  C trend across species: slope {t['slope']:.2f}, r {t['r']:.2f}, C at Tiktaalik d/w {t['C_at_tiktaalik']:.0f}, "
+          f"primary C {t['C_primary_median']:.0f}, mass ratio {t['mass_ratio']:.2f}")
+    t = rb["C_trend_five_species"]
+    print(f"  C trend, five species: slope {t['slope']:.2f}, r {t['r']:.2f}, C at Tiktaalik d/w {t['C_at_tiktaalik']:.0f}, "
+          f"mass ratio {t['mass_ratio']:.2f}")
+    v = rb["validation_all_species"]
+    print(f"  validation, all seven species: median |err| {v['min']:.1f}-{v['max']:.1f}%, median of species {v['median']:.1f}%")
 
 
 if __name__ == "__main__":
