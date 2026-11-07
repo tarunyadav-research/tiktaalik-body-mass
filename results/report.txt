@@ -75,3 +75,19 @@ Method A analogue checks:
   Neoceratodus forsteri: L=170 cm, record 40.0 kg, predicted 35.39 kg (95% 26.01-48.20)
   Latimeria chalumnae: L=168 cm, record 95.0 kg, predicted 66.46 kg (95% 54.77-80.64)
   Atractosteus spatula: L=260 cm, record 137.0 kg, predicted 115.86 kg (95% 76.70-175.19)
+
+Robustness checks:
+  2.75 m as total length: 138.72 kg (95% 48.55-395.15) (L1/L3 median 0.857)
+  crushing, area conserved: 5.50 kg (95% 2.96-10.36)
+  width-depth rho=-0.5: 5.48 kg (95% 3.26-9.44)
+  width-depth rho=0.5: 5.48 kg (95% 2.71-11.25)
+  bream        C=240 d/w=2.82 w/L1=0.179
+  whitefish    C=314 d/w=1.88 w/L1=0.181
+  roach        C=290 d/w=1.83 w/L1=0.176
+  silver bream C=262 d/w=2.77 w/L1=0.173
+  smelt        C=339 d/w=1.65 w/L1=0.115
+  pike         C=357 d/w=1.53 w/L1=0.117
+  perch        C=297 d/w=1.66 w/L1=0.179
+  C trend across species: slope -0.50, r -0.91, C at Tiktaalik d/w 512, primary C 317, mass ratio 1.61
+  C trend, five species: slope -0.71, r -0.68, C at Tiktaalik d/w 621, mass ratio 1.96
+  validation, all seven species: median |err| 4.0-30.8%, median of species 12.5%
