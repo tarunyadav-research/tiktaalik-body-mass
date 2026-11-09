@@ -2,7 +2,7 @@
 
 Code and data for:
 
-> Yadav, T. (2026). How heavy was *Tiktaalik roseae*? A body-mass estimate tested on living fishes, with explicit uncertainty, and why specimen length is the open question. Manuscript, not peer reviewed.
+> Yadav, T. (2026). How heavy was *Tiktaalik roseae*? A body-mass estimate tested on living fishes, with explicit uncertainty, and why specimen length is the open question.*Preprints* 2026, 202611.0854. https://doi.org/10.20944/preprints202611.0854.v1 (not peer reviewed)
 
 Author: Tarun Yadav, Independent Researcher, Delhi, India · ORCID [0009-0000-2291-5146](https://orcid.org/0009-0000-2291-5146)
 
